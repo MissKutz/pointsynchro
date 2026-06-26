@@ -13,22 +13,29 @@
         <h1>Bienvenue !!</h1>
     </header>
 
-    <div id="addOne">
-        <div id="addButton">
-            <button class="btn" id="btnAdd" onclick="addParticipant()">Nouveau participant ?</button>
+    <div class="add-one">
+        <div class="add-one-btn" id="addButton">
+            <button class="btn btn-primary btn-add">Nouveau participant ?</button>
         </div>
-        <div id="inputForm">
-            <input type="text" id="prenom" placeholder="Prénom" required>
-            <input type="text" id="nom" placeholder="Nom" required>
-            <input type="text" id="surnom" placeholder="Surnom (optionnel)">
-            <button onclick="submitForm()">Soumettre</button>
-            <button onclick="resetForm()">Annuler</button>
+        <div class="input-form" id="inputForm">
+            <input type="text" class="field field-prenom" id="prenom" placeholder="Prénom" required>
+            <input type="text" class="field field-nom" id="nom" placeholder="Nom" required>
+            <input type="text" class="field field-surnom" id="surnom" placeholder="Surnom (optionnel)">
+            <button class="btn btn-submit">Soumettre</button>
+            <button class="btn btn-cancel">Annuler</button>
         </div>
     </div>
 
-    <button onclick="window.location.href='reunion.html';">
-        Accéder à la page de réunion
-    </button>
+    <div class="participant-list">
+        <h3>Liste des participants</h3>
+        <div id="participantTable"></div>
+    </div>
+
+    <div class="nav-buttons">
+        <button class="btn btn-primary btn-nav" onclick="window.location.href='reunion.html';">
+            Accéder à la page de réunion
+        </button>
+    </div>
 
 </body>
 </html>
