@@ -2,50 +2,89 @@ const supabaseUrl = 'https://kzdahrsvfqyqfqiruqzh.supabase.co';
 const supabaseAnonKey = 'sb_publishable_zinH0IDMddUTR6SckYabJg_ZOe8F8eD';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-function formatName(p) {
-    return p.surnom || p.prenom + ' ' + p.nom;
+// Cache local des participants - la seule source de vérité est Supabase
+let participantsCache = [];
+
+// ===== CRUD SUPABASE =====
+
+async function loadParticipants() {
+    const { data, error } = await supabaseClient
+        .from('participants')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+    if (error) {
+        console.error('Erreur chargement participants:', error);
+        if (error.code === 'PGRST301' || error.code === '404') {
+            alert('⚠️ La table "participants" n\'existe pas encore.\nDemande au collaborateur d\'exécuter setup.sql dans le SQL Editor du Dashboard Supabase.');
+        }
+        return [];
+    }
+    participantsCache = data || [];
+    return participantsCache;
 }
 
-async function getParticipants() {
-    let localParticipants = JSON.parse(localStorage.getItem('participants') || '[]');
-    let changed = false;
-    localParticipants = localParticipants.map(p => {
-        if (!p.id) { p.id = Date.now() + Math.random(); changed = true; }
-        return p;
-    });
-    if (changed) saveParticipants(localParticipants);
+async function insertParticipant(prenom, nom, surnom) {
+    const { data, error } = await supabaseClient
+        .from('participants')
+        .insert({ prenom, nom, surnom: surnom || null })
+        .select();
 
-    try {
-        const { data, error } = await supabaseClient.from('participants').select('*');
-        if (error) throw error;
-        if (Array.isArray(data)) {
-            for (const localP of localParticipants) {
-                const exists = data.some(p => p.id === localP.id ||
-                    (p.prenom === localP.prenom && p.nom === localP.nom && p.surnom === localP.surnom));
-                if (!exists) {
-                    const { error: insertError } = await supabaseClient
-                        .from('participants')
-                        .insert({
-                            prenom: localP.prenom,
-                            nom: localP.nom,
-                            surnom: localP.surnom,
-                            present: false
-                        });
-                    if (insertError) console.error('Erreur lors de linsertion de participants dans Supabase :', insertError);
-                }
-            }
-            const { data: refreshedData, error: refreshError } = await supabaseClient.from('participants').select('*');
-            if (refreshError) throw refreshError;
-            return refreshedData || [];
-        }
-    } catch (error) {
-        console.error('Erreur lors de la récupération des participants de Supabase :', error);
+    if (error) {
+        console.error('Erreur insertion:', error);
+        alert('Erreur lors de l\'enregistrement dans Supabase');
+        return null;
     }
-    return localParticipants;
+    return data[0];
+}
+
+async function updatePresent(id, present) {
+    const { error } = await supabaseClient
+        .from('participants')
+        .update({ present })
+        .eq('id', id);
+
+    if (error) console.error('Erreur mise à jour present:', error);
+}
+
+async function deleteParticipant(id) {
+    if (!confirm('Supprimer ce participant ?')) return;
+    try {
+        const { error } = await supabaseClient.from('participants').delete().eq('id', id);
+        if (error) throw error;
+        alert('Participant supprimé !');
+        await renderParticipantTable();
+    } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        alert('Erreur lors de la suppression');
+    }
+}
+
+async function toggleSelect(id, currentSelected, checkboxEl) {
+    const newSelected = !currentSelected;
+    try {
+        await supabaseClient.from('participants').update({ selected: newSelected }).eq('id', id);
+    } catch (error) {
+        console.error('Erreur update select:', error);
+    }
+    if (checkboxEl) {
+        checkboxEl.checked = newSelected;
+        checkboxEl.classList.toggle('selected', newSelected);
+    }
+    const row = checkboxEl ? checkboxEl.closest('.participant-row') : null;
+    if (row) {
+        row.classList.toggle('selected', newSelected);
+    }
+}
+
+// ===== Fonctions utilitaires pour la logique local =====
+
+function getParticipants() {
+    return participantsCache;
 }
 
 function saveParticipants(participants) {
-    localStorage.setItem('participants', JSON.stringify(participants));
+    participantsCache = participants;
 }
 
 function getUsedIds() {
@@ -56,79 +95,131 @@ function saveUsedIds(ids) {
     localStorage.setItem('usedIds', JSON.stringify(ids));
 }
 
-async function getRemainingParticipants() {
-    const all = await getParticipants();
+function getRemainingParticipants() {
+    const all = getParticipants();
     const used = getUsedIds();
     return all.filter(p => !used.includes(p.id));
 }
 
-async function getUsedParticipants() {
-    const all = await getParticipants();
+function getUsedParticipants() {
+    const all = getParticipants();
     const used = getUsedIds();
     return all.filter(p => used.includes(p.id));
 }
 
+function formatName(p) {
+    if (p.surnom) {
+        return p.prenom + ' ' + p.nom + ' <span class="surnom">(' + p.surnom + ')</span>';
+    }
+    return p.prenom + ' ' + p.nom;
+}
+
+// ===== Interface (index.html) =====
+
 function addParticipant() {
     const addButton = document.getElementById('addButton');
     const inputForm = document.getElementById('inputForm');
-    addButton.style.display = 'none';
-    inputForm.style.display = 'block';
+    if (addButton) addButton.style.display = 'none';
+    if (inputForm) inputForm.style.display = 'block';
 }
 
-async function resetForm() {
-    document.getElementById('inputForm').style.display = 'none';
-    document.getElementById('addButton').style.display = 'block';
-    document.getElementById('prenom').value = '';
-    document.getElementById('nom').value = '';
-    document.getElementById('surnom').value = '';
+function resetForm() {
+    const inputForm = document.getElementById('inputForm');
+    const addButton = document.getElementById('addButton');
+    if (inputForm && addButton) {
+        inputForm.style.display = 'none';
+        addButton.style.display = 'block';
+    }
+    const prenom = document.getElementById('prenom');
+    const nom = document.getElementById('nom');
+    const surnom = document.getElementById('surnom');
+    if (prenom) prenom.value = '';
+    if (nom) nom.value = '';
+    if (surnom) surnom.value = '';
 }
 
 async function submitForm() {
     const prenom = document.getElementById('prenom').value.trim();
     const nom = document.getElementById('nom').value.trim();
     const surnom = document.getElementById('surnom').value.trim();
-    
+
     if (!prenom || !nom) {
         alert('Veuillez remplir au moins le prénom et le nom');
         return;
     }
-    
-    const id = Date.now();
-    const participantData = { id, prenom, nom, surnom: surnom || null, present: false };
-    console.log('Attempting to save participant:', participantData);
-    try {
-        console.log('Calling Supabase insert with:', participantData);
-        const { error } = await supabaseClient.from('participants').insert(participantData);
-        if (error) {
-            console.error('Erreur lors de linsertion de participants dans Supabase :', error);
-            const participants = JSON.parse(localStorage.getItem('participants') || '[]');
-            participants.push(participantData);
-            saveParticipants(participants);
-            alert('Participant sauvegardé localement (erreur serveur)');
-        }
-    } catch (error) {
-        console.error('Erreur lors de linsertion de participants dans Supabase :', error);
-        const participants = JSON.parse(localStorage.getItem('participants') || '[]');
-        participants.push(participantData);
-        saveParticipants(participants);
-        alert('Participant sauvegardé localement (erreur serveur)');
-    }
-    await resetForm();
+
+    const participant = await insertParticipant(prenom, nom, surnom);
+    if (!participant) return;
+
+    await refreshParticipantTable();
+    resetForm();
 }
+
+async function refreshParticipantTable() {
+    await renderParticipantTable();
+}
+
+async function renderParticipantTable() {
+    const container = document.getElementById('participantTable');
+    if (!container) return;
+
+    const participants = await loadParticipants();
+
+    if (participants.length === 0) {
+        container.innerHTML = '<div class="empty-message">Aucun participant pour le moment</div>';
+        return;
+    }
+
+    let html = '';
+    participants.forEach(p => {
+        const presentChecked = p.present ? 'checked' : '';
+        const cls = p.present ? 'present' : '';
+        const selectedCls = p.selected ? 'selected' : '';
+        html += '<div class="participant-row ' + cls + ' ' + selectedCls + '" data-id="' + p.id + '">' +
+            '<label class="checkbox-label">' +
+            '<input type="checkbox" class="participant-checkbox" ' + presentChecked +
+            ' onchange="togglePresent(' + p.id + ', ' + p.present + ', this)">' +
+            '<span class="checkbox-custom"></span>' +
+            '</label>' +
+            '<span class="participant-info">' +
+            '<span class="prenom-nom">' + formatName(p) + '</span>' +
+            '</span>' +
+            '<button class="delete-btn" onclick="deleteParticipant(' + p.id + ') ">🗑️</button>' +
+            '</div>';
+    });
+    container.innerHTML = html;
+}
+
+async function togglePresent(id, currentPresent, checkboxEl) {
+    const newPresent = !currentPresent;
+    await updatePresent(id, newPresent);
+
+    if (checkboxEl) {
+        checkboxEl.checked = newPresent;
+        checkboxEl.classList.toggle('checked', newPresent);
+    }
+
+    const row = checkboxEl ? checkboxEl.closest('.participant-row') : null;
+    if (row) {
+        row.classList.toggle('present', newPresent);
+    }
+}
+
+// ===== Roulette (reunion.html) =====
 
 let spinInterval = null;
 
-async function renderUsedParticipants() {
+function renderUsedParticipants() {
     const container = document.getElementById('usedList');
     if (!container) return;
-    const used = await getUsedParticipants();
+    const used = getUsedParticipants();
     container.innerHTML = used.map(p =>
-        '<span class="used-participant">' + formatName(p) + '</span>'
+        '<span class="used-participant">' + p.prenom + ' ' + p.nom + '</span>'
     ).join('');
 }
 
-async function tirerAuSort() {
-    const remaining = await getRemainingParticipants();
+function tirerAuSort() {
+    const remaining = getRemainingParticipants();
     const display = document.getElementById('rouletteDisplay');
     const btn = document.querySelector('#rouletteContainer .btn');
 
@@ -141,7 +232,7 @@ async function tirerAuSort() {
 
     let count = 0;
     const totalSpins = 20 + Math.floor(Math.random() * 10);
-    const names = remaining.map(formatName);
+    const names = remaining.map(p => p.prenom + ' ' + p.nom);
 
     spinInterval = setInterval(() => {
         display.textContent = names[Math.floor(Math.random() * names.length)];
@@ -153,164 +244,39 @@ async function tirerAuSort() {
             const usedIds = getUsedIds();
             usedIds.push(winner.id);
             saveUsedIds(usedIds);
-            display.textContent = '🎉 ' + formatName(winner) + ' 🎉';
+            display.textContent = '🎉 ' + winner.prenom + ' ' + winner.nom + ' 🎉';
             renderUsedParticipants();
             if (btn) btn.disabled = false;
         }
     }, 80);
 }
 
-// Initialisation et gestion des participants
-async function initApp() {
-    console.log('Initialisation de l\'application...');
-    await renderParticipantList();
-    await renderDicoEnfants();
-    console.log('Application initialisée avec succès');
-}
+// ===== Initialisation =====
 
-async function renderDicoEnfants() {
-    const container = document.getElementById('motsList');
-    if (!container) return;
-    try {
-        let words = await getDicoEnfants();
-        words = words.filter(w => !w.is_used);
-        if (words.length === 0) {
-            container.innerHTML = '<p>Aucun mot disponible dans le dictionnaire pour enfants !</p>';
-            return;
+document.addEventListener('DOMContentLoaded', async function() {
+    participantsCache = await loadParticipants();
+
+    const participantTable = document.getElementById('participantTable');
+    if (participantTable) {
+        await renderParticipantTable();
+
+        const btnAdd = document.querySelector('.btn-add');
+        const btnSubmit = document.querySelector('.btn-submit');
+        const btnCancel = document.querySelector('.btn-cancel');
+
+        if (btnAdd) {
+            btnAdd.addEventListener('click', addParticipant);
         }
-        container.innerHTML = words.map(w =>
-            '<div class="mot-item"><span class="mot-text">' + w.mot + '</span>' +
-            (w.definition ? '<span class="mot-def">' + w.definition + '</span>' : '') +
-            (w.image ? '<img src="' + w.image + '" alt="' + w.mot + '" class="mot-image">' : '') +
-            '</div>'
-        ).join('');
-    } catch (error) {
-        console.error('Erreur lors du rendu des mots:', error);
-        container.innerHTML = '<p>Erreur lors du chargement des mots.</p>';
-    }
-}
-
-async function renderParticipantList() {
-    const container = document.getElementById('participantTable');
-    if (!container) return;
-    try {
-        const participants = await getParticipants();
-        if (participants.length === 0) {
-            container.innerHTML = '<p>Aucun participant pour le moment.</p>';
-            return;
+        if (btnSubmit) {
+            btnSubmit.addEventListener('click', submitForm);
         }
-        const rows = participants.map(p =>
-            '<div class="participant-row">' +
-            '<span class="participant-name">' + formatName(p) + '</span>' +
-            '<span class="participant-status">' + (p.present ? 'Présent' : 'Absent') + '</span>' +
-            '</div>'
-        ).join('');
-        container.innerHTML = rows;
-    } catch (error) {
-        console.error('Erreur lors du rendu de la liste des participants:', error);
-        container.innerHTML = '<p>Erreur lors du chargement des participants.</p>';
-    }
-}
-
-    let wordsInterval = null;
-
-async function tirerUnMot() {
-    const display = document.getElementById('motDisplay');
-    const listContainer = document.getElementById('motsList');
-    if (!display || !listContainer) return;
-    
-    if (wordsInterval) clearInterval(wordsInterval);
-    try {
-        let words = await getDicoEnfants();
-        words = words.filter(w => !w.is_used);
-        
-        if (words.length === 0) {
-            display.textContent = 'Tous les mots ont été utilisés !';
-            setTimeout(() => renderDicoEnfants(), 2000);
-            return;
+        if (btnCancel) {
+            btnCancel.addEventListener('click', resetForm);
         }
-        
-        let currentIndex = Math.floor(Math.random() * words.length);
-        const currentWord = words[currentIndex];
-        
-        wordsInterval = setInterval(() => {
-            currentIndex = (currentIndex + 1) % words.length;
-            display.textContent = words[currentIndex].mot;
-        }, 80);
-        
-        setTimeout(async () => {
-            clearInterval(wordsInterval);
-            wordsInterval = null;
-            display.textContent = '🎉 ' + currentWord.mot + ' 🎉';
-            
-            try {
-                await supabaseClient
-                    .from('dico_enfants')
-                    .update({ is_used: true, used_at: new Date().toISOString() })
-                    .eq('id', currentWord.id);
-            } catch (error) {
-                console.error('Erreur lors du marquage du mot comme utilisé dans Supabase :', error);
-            }
-            
-            renderDicoEnfants();
-        }, 1200);
-    } catch (error) {
-        console.error('Erreur lors de la sélection du mot:', error);
-        display.textContent = 'Erreur lors du chargement des mots';
     }
-}
 
-window.addEventListener('DOMContentLoaded', () => {
-    initApp();
+    const usedList = document.getElementById('usedList');
+    if (usedList) {
+        renderUsedParticipants();
+    }
 });
-
-function addParticipant() {
-    const addButton = document.getElementById('addButton');
-    const inputForm = document.getElementById('inputForm');
-    if (addButton && inputForm) {
-        addButton.style.display = 'none';
-        inputForm.style.display = 'block';
-    }
-}
-
-async function resetForm() {
-    const inputForm = document.getElementById('inputForm');
-    const addButton = document.getElementById('addButton');
-    if (inputForm && addButton) {
-        inputForm.style.display = 'none';
-        addButton.style.display = 'block';
-    }
-}
-
-async function submitForm() {
-    const prenom = document.getElementById('prenom').value.trim();
-    const nom = document.getElementById('nom').value.trim();
-    const surnom = document.getElementById('surnom').value.trim();
-    
-    if (!prenom || !nom) {
-        alert('Veuillez remplir au moins le prénom et le nom');
-        return;
-    }
-    
-    const id = Date.now();
-    const participantData = { id, prenom, nom, surnom: surnom || null, present: false };
-    console.log('Attempting to save participant:', participantData);
-    try {
-        console.log('Calling Supabase insert with:', participantData);
-        const { error } = await supabaseClient.from('participants').insert(participantData);
-        if (error) {
-            console.error('Erreur lors de linsertion de participants dans Supabase :', error);
-            const participants = JSON.parse(localStorage.getItem('participants') || '[]');
-            participants.push(participantData);
-            saveParticipants(participants);
-            alert('Participant sauvegardé localement (erreur serveur)');
-        }
-    } catch (error) {
-        console.error('Erreur lors de linsertion de participants dans Supabase :', error);
-        const participants = JSON.parse(localStorage.getItem('participants') || '[]');
-        participants.push(participantData);
-        saveParticipants(participants);
-        alert('Participant sauvegardé localement (erreur serveur)');
-    }
-    await resetForm();
-}

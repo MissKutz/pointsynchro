@@ -41,5 +41,39 @@
             Accéder à la page de réunion
         </button>
     </div>
+
+    <script>
+        // ===== Fonctions admin =====
+
+        async function deleteParticipant(id) {
+            if (!confirm('Supprimer ce participant ?')) return;
+            try {
+                const { error } = await supabaseClient.from('participants').delete().eq('id', id);
+                if (error) throw error;
+                alert('Participant supprimé !');
+                await renderParticipantTable();
+            } catch (error) {
+                console.error('Erreur lors de la suppression:', error);
+                alert('Erreur lors de la suppression');
+            }
+        }
+
+        async function toggleSelect(id, currentSelected, checkboxEl) {
+            const newSelected = !currentSelected;
+            try {
+                await supabaseClient.from('participants').update({ selected: newSelected }).eq('id', id);
+            } catch (error) {
+                console.error('Erreur update select:', error);
+            }
+            if (checkboxEl) {
+                checkboxEl.checked = newSelected;
+                checkboxEl.classList.toggle('selected', newSelected);
+            }
+            const row = checkboxEl ? checkboxEl.closest('.participant-row') : null;
+            if (row) {
+                row.classList.toggle('selected', newSelected);
+            }
+        }
+    </script>
 </body>
 </html>
