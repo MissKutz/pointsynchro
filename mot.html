@@ -9,11 +9,17 @@
     <script src="script.js"></script>
 </head>
 <body>
-    <button onclick="window.location.href='reunion.html';">
-        Retour à la page réunion
-    </button>
-    <button onclick="window.location.href='index.html';">
-        Retour à l'index
-    </button>
+    <div style="position: absolute; top: 10px; left: 10px; display: flex; flex-direction: column; gap: 5px;">
+        <button onclick="window.location.href='reunion.html';">
+            Retour à la page réunion
+        </button>
+        <button onclick="window.location.href='index.html';">
+            Retour à l'index
+        </button>
+    </div>
+    <div style="text-align: center; margin: 20px 0;">
+        <div id="motDisplay" style="font-size: 36px; font-weight: bold; margin-bottom: 15px; min-height: 50px;">—</div>
+        <button onclick="tirerMot()">Tirer un mot</button>
+    </div>
 </body>
 </html>
