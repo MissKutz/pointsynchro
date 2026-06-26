@@ -1,3 +1,7 @@
+const supabaseUrl = 'https://kzdahrsvfqyqfqiruqzh.supabase.co';
+const supabaseAnonKey = 'sb_publishable_zinH0IDMddUTR6SckYabJg_ZOe8F8eD';
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
+
 function addParticipant() {
     const addButton = document.getElementById('addButton');
     const inputForm = document.getElementById('inputForm');
