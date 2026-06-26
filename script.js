@@ -2,12 +2,59 @@ const supabaseUrl = 'https://kzdahrsvfqyqfqiruqzh.supabase.co';
 const supabaseAnonKey = 'sb_publishable_zinH0IDMddUTR6SckYabJg_ZOe8F8eD';
 const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
+// Cache local des participants
+let participantsCache = [];
+
+// ===== Participants Supabase =====
+
+async function loadParticipants() {
+    const { data, error } = await supabaseClient
+        .from('participants')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+    if (error) {
+        console.error('Erreur chargement:', error);
+        if (error.code === 'PGRST301' || error.code === '404') {
+            alert('⚠️ La table "participants" n\'existe pas encore dans Supabase.\n\nDemande à ton collaborateur d\'exécuter le fichier setup.sql dans le SQL Editor du Dashboard Supabase.');
+        }
+        return [];
+    }
+    participantsCache = data || [];
+    return participantsCache;
+}
+
+async function insertParticipant(prenom, nom, surnom) {
+    const { data, error } = await supabaseClient
+        .from('participants')
+        .insert({ prenom, nom, surnom: surnom || null })
+        .select();
+
+    if (error) {
+        console.error('Erreur insertion:', error);
+        alert('Erreur lors de l\'enregistrement dans Supabase');
+        return null;
+    }
+    return data[0];
+}
+
+async function updatePresent(id, present) {
+    const { error } = await supabaseClient
+        .from('participants')
+        .update({ present })
+        .eq('id', id);
+
+    if (error) console.error('Erreur mise à jour present:', error);
+}
+
+// ===== Fonctions existantes (adaptées) =====
+
 function getParticipants() {
-    return JSON.parse(localStorage.getItem('participants') || '[]');
+    return participantsCache;
 }
 
 function saveParticipants(participants) {
-    localStorage.setItem('participants', JSON.stringify(participants));
+    participantsCache = participants;
 }
 
 function getUsedIds() {
@@ -33,38 +80,98 @@ function getUsedParticipants() {
 function addParticipant() {
     const addButton = document.getElementById('addButton');
     const inputForm = document.getElementById('inputForm');
-    addButton.style.display = 'none';
-    inputForm.style.display = 'block';
+    if (addButton) addButton.style.display = 'none';
+    if (inputForm) inputForm.style.display = 'block';
 }
 
 function resetForm() {
-    document.getElementById('inputForm').style.display = 'none';
-    document.getElementById('addButton').style.display = 'block';
-    document.getElementById('prenom').value = '';
-    document.getElementById('nom').value = '';
-    document.getElementById('surnom').value = '';
+    const inputForm = document.getElementById('inputForm');
+    const addButton = document.getElementById('addButton');
+    if (inputForm) inputForm.style.display = 'none';
+    if (addButton) addButton.style.display = 'block';
+    const prenom = document.getElementById('prenom');
+    const nom = document.getElementById('nom');
+    const surnom = document.getElementById('surnom');
+    if (prenom) prenom.value = '';
+    if (nom) nom.value = '';
+    if (surnom) surnom.value = '';
 }
 
 function formatName(p) {
-    return p.surnom || p.prenom + ' ' + p.nom;
+    if (p.surnom) {
+        return p.prenom + ' ' + p.nom + ' <span class="surnom">(' + p.surnom + ')</span>';
+    }
+    return p.prenom + ' ' + p.nom;
 }
 
-function submitForm() {
+// ===== Gestion du tableau participants (index.html) =====
+
+async function submitForm() {
     const prenom = document.getElementById('prenom').value.trim();
     const nom = document.getElementById('nom').value.trim();
     const surnom = document.getElementById('surnom').value.trim();
-    
+
     if (!prenom || !nom) {
         alert('Veuillez remplir au moins le prénom et le nom');
         return;
     }
-    
-    const data = { id: Date.now(), prenom, nom, surnom: surnom || null };
-    const participants = getParticipants();
-    participants.push(data);
-    saveParticipants(participants);
+
+    const participant = await insertParticipant(prenom, nom, surnom);
+    if (!participant) return;
+
+    await refreshParticipantTable();
     resetForm();
 }
+
+async function togglePresent(id, currentPresent, checkboxEl) {
+    const newPresent = !currentPresent;
+    await updatePresent(id, newPresent);
+
+    if (checkboxEl) {
+        checkboxEl.checked = newPresent;
+        checkboxEl.classList.toggle('checked', newPresent);
+    }
+
+    const row = checkboxEl ? checkboxEl.closest('.participant-row') : null;
+    if (row) {
+        row.classList.toggle('present', newPresent);
+    }
+}
+
+async function renderParticipantTable() {
+    const container = document.getElementById('participantTable');
+    if (!container) return;
+
+    const participants = await loadParticipants();
+
+    if (participants.length === 0) {
+        container.innerHTML = '<div class="empty-message">Aucun participant pour le moment</div>';
+        return;
+    }
+
+    let html = '';
+    participants.forEach(p => {
+        const checked = p.present ? 'checked' : '';
+        const cls = p.present ? 'present' : '';
+        html += '<div class="participant-row ' + cls + '" data-id="' + p.id + '">' +
+            '<label class="checkbox-label">' +
+            '<input type="checkbox" class="participant-checkbox" ' + checked +
+            ' onchange="togglePresent(' + p.id + ', ' + p.present + ', this)">' +
+            '<span class="checkbox-custom"></span>' +
+            '</label>' +
+            '<span class="participant-name">' + formatName(p) + '</span>' +
+            '</div>';
+    });
+    container.innerHTML = html;
+}
+
+async function refreshParticipantTable() {
+    const container = document.getElementById('participantTable');
+    if (!container) return;
+    await renderParticipantTable();
+}
+
+// ===== Roulette (reunion.html) =====
 
 let spinInterval = null;
 
@@ -73,7 +180,7 @@ function renderUsedParticipants() {
     if (!container) return;
     const used = getUsedParticipants();
     container.innerHTML = used.map(p =>
-        '<span class="used-participant">' + formatName(p) + '</span>'
+        '<span class="used-participant">' + p.prenom + ' ' + p.nom + '</span>'
     ).join('');
 }
 
@@ -91,7 +198,7 @@ function tirerAuSort() {
 
     let count = 0;
     const totalSpins = 20 + Math.floor(Math.random() * 10);
-    const names = remaining.map(formatName);
+    const names = remaining.map(p => p.prenom + ' ' + p.nom);
 
     spinInterval = setInterval(() => {
         display.textContent = names[Math.floor(Math.random() * names.length)];
@@ -103,9 +210,42 @@ function tirerAuSort() {
             const usedIds = getUsedIds();
             usedIds.push(winner.id);
             saveUsedIds(usedIds);
-            display.textContent = '🎉 ' + formatName(winner) + ' 🎉';
+            display.textContent = '🎉 ' + winner.prenom + ' ' + winner.nom + ' 🎉';
             renderUsedParticipants();
             if (btn) btn.disabled = false;
         }
     }, 80);
 }
+
+// ===== Initialisation =====
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Charger les participants depuis Supabase
+    participantsCache = await loadParticipants();
+
+    // Initialiser le tableau si on est sur index.html
+    const participantTable = document.getElementById('participantTable');
+    if (participantTable) {
+        await renderParticipantTable();
+
+        const btnAdd = document.querySelector('.btn-add');
+        const btnSubmit = document.querySelector('.btn-submit');
+        const btnCancel = document.querySelector('.btn-cancel');
+
+        if (btnAdd) {
+            btnAdd.addEventListener('click', addParticipant);
+        }
+        if (btnSubmit) {
+            btnSubmit.addEventListener('click', submitForm);
+        }
+        if (btnCancel) {
+            btnCancel.addEventListener('click', resetForm);
+        }
+    }
+
+    // Initialiser la reunion
+    const usedList = document.getElementById('usedList');
+    if (usedList) {
+        renderUsedParticipants();
+    }
+});

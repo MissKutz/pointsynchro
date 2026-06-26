@@ -5,37 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Point synchro</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </head>
 <body>
-    <header class="header">
+    <header>
         <h1>Bienvenue !!</h1>
     </header>
 
     <div class="add-one">
-        <div class="add-one-btn">
+        <div class="add-one-btn" id="addButton">
             <button class="btn btn-primary btn-add">Nouveau participant ?</button>
         </div>
-        <div class="input-form">
-            <input type="text" class="field field-prenom" placeholder="Prénom" required>
-            <input type="text" class="field field-nom" placeholder="Nom" required>
-            <input type="text" class="field field-surnom" placeholder="Surnom (optionnel)">
+        <div class="input-form" id="inputForm">
+            <input type="text" class="field field-prenom" id="prenom" placeholder="Prénom" required>
+            <input type="text" class="field field-nom" id="nom" placeholder="Nom" required>
+            <input type="text" class="field field-surnom" id="surnom" placeholder="Surnom (optionnel)">
             <button class="btn btn-submit">Soumettre</button>
             <button class="btn btn-cancel">Annuler</button>
         </div>
     </div>
 
-    <button class="btn btn-primary btn-nav">
-        Accéder à la page de réunion
-    </button>
+    <div class="participant-list">
+        <h3>Liste des participants</h3>
+        <div id="participantTable"></div>
+    </div>
 
-    <div class="dico-section">
-        <div class="dico-card">
-            <div class="dico-title">📖 Dictionnaire Enfant</div>
-            <div class="dico-word">?</div>
-            <div class="dico-cat">Clique sur le bouton</div>
-            <button class="btn btn-word">Mot aléatoire</button>
-        </div>
+    <div class="nav-buttons">
+        <button class="btn btn-primary btn-nav" onclick="window.location.href='reunion.html';">
+            Accéder à la page de réunion
+        </button>
     </div>
 
 </body>
