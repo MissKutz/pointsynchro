@@ -38,14 +38,44 @@ header {
     width: 250px;
     text-align: center;
 }
-#inputForm button {
+button {
     margin: 10px 5px;
-    padding: 8px 16px;
+    padding: 12px 28px;
     font-size: 16px;
     cursor: pointer;
+    border: none;
+    border-radius: 25px;
+    background: linear-gradient(135deg, #6c99a9, #8aafc9);
+    color: white;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.3s;
+    box-shadow: 0 4px 15px rgba(108, 153, 169, 0.3);
 }
-.btn {
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 153, 169, 0.5);
+    background: linear-gradient(135deg, #5a8a9a, #7a9fb9);
+}
+button:active {
+    transform: translateY(0);
+}
+#inputForm button:first-of-type {
+    background: linear-gradient(135deg, #9b8ec4, #b9a8d8);
+    box-shadow: 0 4px 15px rgba(155, 142, 196, 0.3);
+}
+#inputForm button:first-of-type:hover {
+    background: linear-gradient(135deg, #8b7eb4, #a998c8);
+    box-shadow: 0 6px 20px rgba(155, 142, 196, 0.5);
+}
+#inputForm button:last-of-type {
+    background: transparent;
+    color: #6c99a9;
+    box-shadow: none;
+    border: 2px solid #6c99a9;
+}
+#inputForm button:last-of-type:hover {
+    background: rgba(108, 153, 169, 0.1);
+    box-shadow: none;
+    transform: translateY(-2px);
 }
