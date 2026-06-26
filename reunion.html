@@ -9,8 +9,12 @@
     <script src="script.js"></script>
 </head>
 <body>
-    <div style="text-align: center; margin: 20px 0;">
-        <button class="btn" onclick="alert('Participant tiré au sort !');">Tirer au sort un participant 🎲</button>
+    <div id="rouletteContainer" style="text-align: center; margin: 20px 0;">
+        <div id="rouletteDisplay" style="font-size: 32px; font-weight: bold; margin-bottom: 15px; min-height: 50px;">—</div>
+        <button class="btn" onclick="tirerAuSort()">Tirer au sort un participant 🎲</button>
+    </div>
+    <div id="usedContainer" style="text-align: center; margin-top: 30px; min-height: 30px;">
+        <h3 style="color: #666; margin-bottom: 10px;">Déjà tirés : <span id="usedList"></span></h3>
     </div>
     <button onclick="window.location.href='mot.html';">
         Accéder à la page mot
