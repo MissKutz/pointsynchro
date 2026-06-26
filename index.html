@@ -5,30 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Point synchro</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </head>
 <body>
-    <header>
+    <header class="header">
         <h1>Bienvenue !!</h1>
     </header>
 
-    <div id="addOne">
-        <div id="addButton">
-            <button class="btn" id="btnAdd" onclick="addParticipant()">Nouveau participant ?</button>
+    <div class="add-one">
+        <div class="add-one-btn">
+            <button class="btn btn-primary btn-add">Nouveau participant ?</button>
         </div>
-        <div id="inputForm">
-            <input type="text" id="prenom" placeholder="Prénom" required>
-            <input type="text" id="nom" placeholder="Nom" required>
-            <input type="text" id="surnom" placeholder="Surnom (optionnel)">
-            <button onclick="submitForm()">Soumettre</button>
-            <button onclick="resetForm()">Annuler</button>
+        <div class="input-form">
+            <input type="text" class="field field-prenom" placeholder="Prénom" required>
+            <input type="text" class="field field-nom" placeholder="Nom" required>
+            <input type="text" class="field field-surnom" placeholder="Surnom (optionnel)">
+            <button class="btn btn-submit">Soumettre</button>
+            <button class="btn btn-cancel">Annuler</button>
         </div>
     </div>
 
-    <button onclick="window.location.href='reunion.html';">
+    <button class="btn btn-primary btn-nav">
         Accéder à la page de réunion
     </button>
+
+    <div class="dico-section">
+        <div class="dico-card">
+            <div class="dico-title">📖 Dictionnaire Enfant</div>
+            <div class="dico-word">?</div>
+            <div class="dico-cat">Clique sur le bouton</div>
+            <button class="btn btn-word">Mot aléatoire</button>
+        </div>
+    </div>
 
 </body>
 </html>
