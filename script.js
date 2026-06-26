@@ -1,109 +1,111 @@
-const dicoEnfant = [
-    { mot: "Chat", categorie: "Animal" },
-    { mot: "Chien", categorie: "Animal" },
-    { mot: "Soleil", categorie: "Nature" },
-    { mot: "Lune", categorie: "Nature" },
-    { mot: "Fleur", categorie: "Nature" },
-    { mot: "Arbre", categorie: "Nature" },
-    { mot: "Pomme", categorie: "Fruit" },
-    { mot: "Banane", categorie: "Fruit" },
-    { mot: "Fraise", categorie: "Fruit" },
-    { mot: "Maison", categorie: "Objet" },
-    { mot: "Voiture", categorie: "Objet" },
-    { mot: "Ballon", categorie: "Jouet" },
-    { mot: "Poupée", categorie: "Jouet" },
-    { mot: "Livre", categorie: "Objet" },
-    { mot: "Étoile", categorie: "Nature" },
-    { mot: "Arc-en-ciel", categorie: "Nature" },
-    { mot: "Papillon", categorie: "Animal" },
-    { mot: "Poisson", categorie: "Animal" },
-    { mot: "Oiseau", categorie: "Animal" },
-    { mot: "Lapin", categorie: "Animal" },
-    { mot: "Gâteau", categorie: "Nourriture" },
-    { mot: "Glace", categorie: "Nourriture" },
-    { mot: "Chocolat", categorie: "Nourriture" },
-    { mot: "Biscuit", categorie: "Nourriture" },
-    { mot: "Eau", categorie: "Nature" },
-    { mot: "Montagne", categorie: "Nature" },
-    { mot: "Rivière", categorie: "Nature" },
-    { mot: "Nuage", categorie: "Nature" },
-    { mot: "Vent", categorie: "Nature" },
-    { mot: "Bateau", categorie: "Objet" },
-    { mot: "Avion", categorie: "Objet" },
-    { mot: "Train", categorie: "Objet" },
-    { mot: "Vélo", categorie: "Objet" },
-    { mot: "Tambour", categorie: "Jouet" },
-    { mot: "Marionnette", categorie: "Jouet" },
-    { mot: "Cerf-volant", categorie: "Jouet" },
-    { mot: "Lego", categorie: "Jouet" },
-    { mot: "Crayon", categorie: "Objet" },
-    { mot: "Peinture", categorie: "Objet" },
-    { mot: "Cartable", categorie: "Objet" },
-];
+const supabaseUrl = 'https://kzdahrsvfqyqfqiruqzh.supabase.co';
+const supabaseAnonKey = 'sb_publishable_zinH0IDMddUTR6SckYabJg_ZOe8F8eD';
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-function motAleatoire() {
-    const index = Math.floor(Math.random() * dicoEnfant.length);
-    return dicoEnfant[index];
+function getParticipants() {
+    return JSON.parse(localStorage.getItem('participants') || '[]');
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    const btnAdd = document.querySelector('.btn-add');
-    const btnSubmit = document.querySelector('.btn-submit');
-    const btnCancel = document.querySelector('.btn-cancel');
-    const btnNav = document.querySelector('.btn-nav');
-    const btnWord = document.querySelector('.btn-word');
-    const addOneBtn = document.querySelector('.add-one-btn');
-    const inputForm = document.querySelector('.input-form');
-    const wordDisplay = document.querySelector('.dico-word');
-    const catDisplay = document.querySelector('.dico-cat');
+function saveParticipants(participants) {
+    localStorage.setItem('participants', JSON.stringify(participants));
+}
 
-    if (btnAdd && btnSubmit && btnCancel && btnNav && btnWord && addOneBtn && inputForm && wordDisplay && catDisplay) {
+function getUsedIds() {
+    return JSON.parse(localStorage.getItem('usedIds') || '[]');
+}
 
-        btnAdd.addEventListener('click', function() {
-            addOneBtn.style.display = 'none';
-            inputForm.style.display = 'block';
-        });
+function saveUsedIds(ids) {
+    localStorage.setItem('usedIds', JSON.stringify(ids));
+}
 
-        btnSubmit.addEventListener('click', function() {
-            const prenom = document.querySelector('.field-prenom').value.trim();
-            const nom = document.querySelector('.field-nom').value.trim();
-            const surnom = document.querySelector('.field-surnom').value.trim();
+function getRemainingParticipants() {
+    const all = getParticipants();
+    const used = getUsedIds();
+    return all.filter(p => !used.includes(p.id));
+}
 
-            if (!prenom || !nom) {
-                alert('Veuillez remplir au moins le prénom et le nom');
-                return;
-            }
+function getUsedParticipants() {
+    const all = getParticipants();
+    const used = getUsedIds();
+    return all.filter(p => used.includes(p.id));
+}
 
-            const data = { prenom, nom, surnom: surnom || null };
-            console.log('Participant ajouté:', data);
-            alert(`✅ Participant ajouté : ${prenom} ${nom}`);
+function addParticipant() {
+    const addButton = document.getElementById('addButton');
+    const inputForm = document.getElementById('inputForm');
+    addButton.style.display = 'none';
+    inputForm.style.display = 'block';
+}
 
-            inputForm.style.display = 'none';
-            addOneBtn.style.display = 'block';
-            document.querySelector('.field-prenom').value = '';
-            document.querySelector('.field-nom').value = '';
-            document.querySelector('.field-surnom').value = '';
-        });
+function resetForm() {
+    document.getElementById('inputForm').style.display = 'none';
+    document.getElementById('addButton').style.display = 'block';
+    document.getElementById('prenom').value = '';
+    document.getElementById('nom').value = '';
+    document.getElementById('surnom').value = '';
+}
 
-        btnCancel.addEventListener('click', function() {
-            inputForm.style.display = 'none';
-            addOneBtn.style.display = 'block';
-            document.querySelector('.field-prenom').value = '';
-            document.querySelector('.field-nom').value = '';
-            document.querySelector('.field-surnom').value = '';
-        });
+function formatName(p) {
+    return p.surnom || p.prenom + ' ' + p.nom;
+}
 
-        btnNav.addEventListener('click', function() {
-            window.location.href = 'reunion.html';
-        });
-
-        btnWord.addEventListener('click', function() {
-            const resultat = motAleatoire();
-            wordDisplay.textContent = resultat.mot;
-            catDisplay.textContent = 'Catégorie : ' + resultat.categorie;
-            wordDisplay.style.transform = 'scale(1.1)';
-            setTimeout(() => { wordDisplay.style.transform = 'scale(1)'; }, 200);
-        });
-
+function submitForm() {
+    const prenom = document.getElementById('prenom').value.trim();
+    const nom = document.getElementById('nom').value.trim();
+    const surnom = document.getElementById('surnom').value.trim();
+    
+    if (!prenom || !nom) {
+        alert('Veuillez remplir au moins le prénom et le nom');
+        return;
     }
-});
+    
+    const data = { id: Date.now(), prenom, nom, surnom: surnom || null };
+    const participants = getParticipants();
+    participants.push(data);
+    saveParticipants(participants);
+    resetForm();
+}
+
+let spinInterval = null;
+
+function renderUsedParticipants() {
+    const container = document.getElementById('usedList');
+    if (!container) return;
+    const used = getUsedParticipants();
+    container.innerHTML = used.map(p =>
+        '<span class="used-participant">' + formatName(p) + '</span>'
+    ).join('');
+}
+
+function tirerAuSort() {
+    const remaining = getRemainingParticipants();
+    const display = document.getElementById('rouletteDisplay');
+    const btn = document.querySelector('#rouletteContainer .btn');
+
+    if (remaining.length === 0) {
+        alert('Tous les participants ont déjà été tirés !');
+        return;
+    }
+
+    if (btn) btn.disabled = true;
+
+    let count = 0;
+    const totalSpins = 20 + Math.floor(Math.random() * 10);
+    const names = remaining.map(formatName);
+
+    spinInterval = setInterval(() => {
+        display.textContent = names[Math.floor(Math.random() * names.length)];
+        count++;
+        if (count >= totalSpins) {
+            clearInterval(spinInterval);
+            spinInterval = null;
+            const winner = remaining[Math.floor(Math.random() * remaining.length)];
+            const usedIds = getUsedIds();
+            usedIds.push(winner.id);
+            saveUsedIds(usedIds);
+            display.textContent = '🎉 ' + formatName(winner) + ' 🎉';
+            renderUsedParticipants();
+            if (btn) btn.disabled = false;
+        }
+    }, 80);
+}

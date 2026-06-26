@@ -111,3 +111,14 @@ button:active {
     background: linear-gradient(135deg, #8b7eb4, #a998c8);
     box-shadow: 0 6px 25px rgba(155, 142, 196, 0.4);
 }
+
+.used-participant {
+    display: inline;
+    background: #ccc;
+    color: #666;
+    padding: 2px 8px;
+    margin-left: 6px;
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: normal;
+}
