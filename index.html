@@ -15,20 +15,25 @@
 
     <div class="add-one">
         <div class="add-one-btn" id="addButton">
-            <button class="btn btn-primary btn-add">Nouveau participant ?</button>
+            <button class="btn btn-primary btn-add" onclick="addParticipant()">Nouveau participant ?</button>
         </div>
         <div class="input-form" id="inputForm">
             <input type="text" class="field field-prenom" id="prenom" placeholder="Prénom" required>
             <input type="text" class="field field-nom" id="nom" placeholder="Nom" required>
             <input type="text" class="field field-surnom" id="surnom" placeholder="Surnom (optionnel)">
-            <button class="btn btn-submit">Soumettre</button>
-            <button class="btn btn-cancel">Annuler</button>
+            <button class="btn btn-submit" onclick="submitForm()">Soumettre</button>
+            <button class="btn btn-cancel" onclick="resetForm()">Annuler</button>
         </div>
     </div>
 
     <div class="participant-list">
         <h3>Liste des participants</h3>
-        <div id="participantTable"></div>
+        <div id="participantTable">Chargement...</div>
+    </div>
+
+    <div class="dico-enfants-list">
+        <h3>Dictionnaire pour enfants</h3>
+        <div id="motsList">Chargement...</div>
     </div>
 
     <div class="nav-buttons">
@@ -36,6 +41,5 @@
             Accéder à la page de réunion
         </button>
     </div>
-
 </body>
 </html>
